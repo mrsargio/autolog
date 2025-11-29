@@ -1,0 +1,11 @@
+=== API ENDPOINTS ===
+
+/api/course/${d.id}/subjects`)).json();console.log(
+https://utkarsh-api.vercel.app/api/course/${e}/subject/${t}/topics`)).json();console.log(
+/api/batch/${e}`)).json();console.log(
+/api/course/${e}/subject/${t}/topic/${n}/content`)).json();console.log(
+https://utkarsh-api.vercel.app/api/batch/${e}`)).json();console.log(
+https://utkarsh-api.vercel.app/api/course/${d.id}/subjects`)).json();console.log(
+/api/course/${e}/subject/${t}/topics`)).json();console.log(
+https://utk-batches-api.vercel.app/api
+https://utkarsh-api.vercel.app/api/course/${e}/subject/${t}/topic/${n}/content`)).json();console.log(

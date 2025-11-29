@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExamSaathi - Learning Platform</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <style>
+        /* --- Font and Base --- */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7faff;
+        }
+
+        /* --- Naye Page Transition Animations --- */
+        @keyframes slideInFromRight {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes slideOutToLeft {
+            from { opacity: 1; transform: translateX(0); }
+            to { opacity: 0; transform: translateX(-20px); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.98); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .page {
+            display: none;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        .page-enter {
+            animation: slideInFromRight 0.4s ease-out forwards;
+        }
+        .page-exit {
+            animation: slideOutToLeft 0.4s ease-out forwards;
+        }
+
+        /* --- Favorite Icon Style --- */
+        .fav-icon.favorited svg {
+            fill: #ef4444;
+            stroke: #ef4444;
+        }
+
+        /* --- Scrollbar Styling --- */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #a8b5c1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #8e9ca9;
+        }
+
+        /* --- Splash Screen Animation --- */
+        @keyframes web-load {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+        .loading-bar {
+            animation: web-load 1.5s ease-out forwards;
+        }
+
+        /* फेवरिट पेज के लिए नया CSS */
+        #favorites-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .favorite-batch-card {
+            transform: scale(1);
+            transition: all 0.3s ease;
+        }
+
+        .favorite-batch-card:hover {
+            transform: scale(1.02);
+            box-shadow: 0 20px 25px -5px rgba(236, 72, 153, 0.3);
+        }
+
+        /* Favorite icon animation */
+        .fav-icon {
+            transition: all 0.3s ease;
+        }
+
+        .fav-icon:hover {
+            transform: scale(1.1);
+        }
+
+        .fav-icon.favorited {
+            animation: heartBeat 0.6s ease;
+        }
+
+        @keyframes heartBeat {
+            0% { transform: scale(1); }
+            25% { transform: scale(1.3); }
+            50% { transform: scale(1); }
+            75% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        /* Favorite page specific styles */
+        #page-favorites {
+            background: linear-gradient(135deg, #fdf2ff 0%, #f0f9ff 100%);
+        }
+
+        .favorite-batch-card {
+            border: 2px solid transparent;
+            background: linear-gradient(white, white) padding-box,
+                        linear-gradient(135deg, #ec4899, #8b5cf6) border-box;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Splash Screen -->
+    <div id="splash-screen" class="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center">
+        <div class="text-center">
+            <div class="w-20 h-20 bg-gradient-to-r from-purple-500 to-blue-500 rounded-2xl mx-auto mb-6 flex items-center justify-center">
+                <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"></path>
+                </svg>
+            </div>
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">ExamSaathi</h1>
+            <p class="text-gray-600 mb-6">Your Learning Companion</p>
+            <div class="w-64 h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div class="loading-bar h-full bg-gradient-to-r from-purple-500 to-blue-500"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="app-container" class="hidden">
+        <!-- Home Page -->
+        <div id="page-home" class="page active">
+            <div class="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
+                <!-- Header -->
+                <div class="bg-white/80 backdrop-blur-sm border-b border-gray-200">
+                    <div class="max-w-7xl mx-auto px-4 py-6">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h1 class="text-2xl font-bold text-gray-800">ExamSaathi</h1>
+                                    <p class="text-sm text-gray-600">Your Learning Companion</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-4">
+                                <button id="btn-show-favorites" class="bg-pink-500 hover:bg-pink-600 text-white px-4 py-2 rounded-lg transition-all flex items-center gap-2">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                                    </svg>
+                                    ❤️ My Favorites
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search Bar -->
+                <div id="search-bar-container" class="max-w-7xl mx-auto px-4 py-8">
+                    <div class="relative max-w-2xl mx-auto">
+                        <input 
+                            id="search-bar" 
+                            type="text" 
+                            placeholder="Search batches..." 
+                            class="w-full px-6 py-4 pl-14 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-2xl shadow-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-lg"
+                        >
+                        <svg class="absolute left-5 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- Main Content -->
+                <div class="max-w-7xl mx-auto px-4 pb-12">
+                    <!-- Loading State -->
+                    <div id="home-loader" class="text-center py-12">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto"></div>
+                        <p class="text-gray-600 mt-4">Loading batches...</p>
+                    </div>
+
+                    <!-- No Results -->
+                    <div id="no-results" class="hidden text-center py-12">
+                        <svg class="w-24 h-24 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <h3 class="text-xl font-semibold text-gray-600 mb-2">No batches found</h3>
+                        <p class="text-gray-500">Try adjusting your search terms</p>
+                    </div>
+
+                    <!-- Batches Grid -->
+                    <div id="batch-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Batch Menu Page -->
+        <div id="page-batch-menu" class="page">
+            <div class="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
+                <div class="max-w-4xl mx-auto">
+                    <!-- Header -->
+                    <div class="flex items-center justify-between mb-8">
+                        <div class="flex items-center gap-4">
+                            <button id="btn-back-to-home" class="bg-gray-500 hover:bg-gray-600 text-white p-2 rounded-lg">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                                </svg>
+                            </button>
+                            <h1 id="details-batch-title" class="text-3xl font-bold text-gray-800">Batch Details</h1>
+                        </div>
+                    </div>
+
+                    <!-- Menu Options -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <button id="menu-lectures" class="bg-white rounded-2xl shadow-lg p-6 text-left hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group border-2 border-transparent hover:border-purple-200">
+                            <div class="flex items-center">
+                                <svg class="w-8 h-8 text-purple-500 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <div>
+                                    <h3 class="text-xl font-semibold text-gray-800">Video Lectures</h3>
+                                    <p class="text-gray-600 mt-1">Watch recorded classes</p>
+                                </div>
+                            </div>
+                        </button>
+
+                        <button id="menu-pdfs" class="bg-white rounded-2xl shadow-lg p-6 text-left hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group border-2 border-transparent hover:border-blue-200">
+                            <div class="flex items-center">
+                                <svg class="w-8 h-8 text-blue-500 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                                <div>
+                                    <h3 class="text-xl font-semibold text-gray-800">Study Material</h3>
+                                    <p class="text-gray-600 mt-1">Download PDFs & Notes</p>
+                                </div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Topic List Page -->
+        <div id="page-topic-list" class="page">
+            <div class="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
+                <div class="max-w-4xl mx-auto">
+                    <!-- Header -->
+                    <div class="flex items-center justify-between mb-8">
+                        <div class="flex items-center gap-4">
+                            <button id="btn-back-to-menu" class="bg-gray-500 hover:bg-gray-600 text-white p-2 rounded-lg">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                                </svg>
+                            </button>
+                            <h1 id="topic-list-title" class="text-3xl font-bold text-gray-800">Topics</h1>
+                        </div>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div id="topic-list-loader" class="text-center py-12">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto"></div>
+                        <p class="text-gray-600 mt-4">Loading topics...</p>
+                    </div>
+
+                    <!-- Topics List -->
+                    <div id="topic-list-container" class="space-y-4"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content List Page -->
+        <div id="page-content-list" class="page">
+            <div class="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
+                <div class="max-w-4xl mx-auto">
+                    <!-- Header -->
+                    <div class="flex items-center justify-between mb-8">
+                        <div class="flex items-center gap-4">
+                            <button id="btn-back-to-topics" class="bg-gray-500 hover:bg-gray-600 text-white p-2 rounded-lg">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                                </svg>
+                            </button>
+                            <h1 id="content-list-title" class="text-3xl font-bold text-gray-800">Content</h1>
+                        </div>
+                    </div>
+
+                    <!-- Content List -->
+                    <div id="content-list-container" class="space-y-4"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Favorites Page -->
+        <div id="page-favorites" class="page">
+            <div class="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
+                <div class="max-w-7xl mx-auto">
+                    <!-- Header -->
+                    <div class="flex items-center justify-between mb-8">
+                        <div class="flex items-center gap-4">
+                            <button id="btn-back-from-favorites" class="bg-gray-500 hover:bg-gray-600 text-white p-2 rounded-lg">
+                                ← Back
+                            </button>
+                            <h1 class="text-3xl font-bold text-gray-800">❤️ My Favorites</h1>
+                        </div>
+                    </div>
+
+                    <!-- Favorites Grid -->
+                    <div id="favorites-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        <!-- Favorites यहाँ load होंगे -->
+                    </div>
+
+                    <!-- No Favorites Message -->
+                    <div id="no-favorites" class="hidden text-center py-12">
+                        <div class="text-gray-400 mb-4">
+                            <svg class="w-24 h-24 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                            </svg>
+                        </div>
+                        <p class="text-xl text-gray-500 mb-2">No favorites yet</p>
+                        <p class="text-gray-400">Start adding batches to your favorites!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        // यहाँ वही पूरा JavaScript कोड paste करें जो मैंने ऊपर दिया है
+        // पूरा JavaScript code यहाँ आएगा
+        function _0x23a1(){const _0x46a86a=['menu-lectures','.fav-button[data-batch-id=\x22','-100\x20text-','All\x20Topics','Network\x20error','filter','click','createElement','banner','1524995ReRjtS','<svg\x20class=\x22w-6\x20h-6\x20text-purple-500\x20mr-4\x20flex-shrink-0\x22\x20xmlns=\x22http://www.w3.org/2000/svg\x22\x20viewBox=\x220\x200\x2020\x2020\x22\x20fill=\x22currentColor\x22><path\x20fill-rule=\x22evenodd\x22\x20d=\x22M5.5\x202a.5.5\x200\x2000-.5.5v15a.5.5\x200\x2000.75.43l6.5-3.5a.5.5\x200\x20000-.86l-6.5-3.5A.5.5\x200\x20005.5\x209V2.5a.5.5\x200\x2000-.5-.5z\x22\x20clip-rule=\x22evenodd\x22\x20/></svg>','data','classes','/allbatch','value','no-results','pointer-events-none','closest','home-loader','content-list-title','push','btn-back-to-topics','hidden','cyan','classList','2373UibrSj','className','style','ms\x20forwards','none','rel','DOMContentLoaded','display','class_link','.batch-card','topic-list-loader','find','appendChild','10493pwLqmL','remove','spidy_favorites','241534FFTkgh','div','includes','search-bar','topic-list-title','\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22relative\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<img\x20src=\x22','getItem','getElementById','/pdf/','\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20','innerHTML','forEach','topic-card\x20group\x20bg-white\x20p-5\x20rounded-xl\x20shadow-lg\x20hover:shadow-cyan-500/20\x20transition-all\x20duration-300\x20cursor-pointer\x20flex\x20justify-between\x20items-center','8pbeCjJ','https://selectionway.examsaathi.site','content-list-container','add','target','app-container','setItem','batchId','topic-list-container','querySelector','All\x20PDFs','page-content-list','API\x20error','success','lectures','5046kkoUkD','json','508TVWyNH','toggle','page-home','-600\x20transition-transform\x20group-hover:translate-x-1\x22\x20xmlns=\x22http://www.w3.org/2000/svg\x22\x20fill=\x22none\x22\x20viewBox=\x220\x200\x2024\x2024\x22\x20stroke-width=\x222\x22\x20stroke=\x22currentColor\x22><path\x20stroke-linecap=\x22round\x22\x20stroke-linejoin=\x22round\x22\x20d=\x22M9\x205l7\x207-7\x207\x22\x20/></svg>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20','<p\x20class=\x22text-center\x20text-gray-500\x22>No\x20topics\x20found.</p>','<svg\x20class=\x22w-6\x20h-6\x20text-blue-500\x20mr-4\x20flex-shrink-0\x22\x20xmlns=\x22http://www.w3.org/2000/svg\x22\x20viewBox=\x220\x200\x2020\x2020\x22\x20fill=\x22currentColor\x22><path\x20fill-rule=\x22evenodd\x22\x20d=\x22M10\x2018a8\x208\x200\x20100-16\x208\x208\x200\x20000\x2016zM9.555\x207.168A1\x201\x200\x20008\x208v4a1\x201\x200\x20001.555.832l3-2a1\x201\x200\x20000-1.664l-3-2z\x22\x20clip-rule=\x22evenodd\x22\x20/></svg>','batch-card\x20bg-white\x20rounded-2xl\x20shadow-lg\x20overflow-hidden\x20cursor-pointer\x20transition-all\x20duration-300\x20hover:shadow-cyan-500/30\x20hover:shadow-xl\x20hover:-translate-y-1','\x22\x20alt=\x22','block','<p\x20class=\x22text-center\x20text-gray-500\x22>No\x20content\x20found.</p>','toLowerCase','scrollTo','</span>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20','96020QMsoDQ','flex\x20items-center\x20p-4\x20bg-white\x20rounded-lg\x20shadow-md\x20hover:shadow-lg\x20transition-all\x20transform\x20hover:scale-[1.02]','page-topic-list','</h3>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20</div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<svg\x20class=\x22w-6\x20h-6\x20text-gray-400\x20group-hover:text-','addEventListener','stringify','uploadPdf','<p\x20class=\x22text-center\x20text-red-500\x22>Failed\x20to\x20load\x20topics.</p>','favorited','href','\x20absolute\x20top-3\x20right-3\x20z-10\x20p-1.5\x20bg-white/70\x20rounded-full\x20text-gray-700\x20hover:text-red-500\x20transition-all\x22\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20data-batch-id=\x22','indigo','opacity','3442776wDaJZJ','batchTitle','btn-back-to-menu','opacity-0','12586653jOOXqA','active','noopener\x20noreferrer','details-batch-title','textContent','page-batch-menu','title','topicName','topics','animation','length','dataset','btn-back-to-home','fadeIn\x200.5s\x20ease-out\x20'];_0x23a1=function(){return _0x46a86a;};return _0x23a1();}
+
+        const _0x39e566=_0x1863;
+        function _0x1863(_0x112890,_0x308b6c){const _0x23a14d=_0x23a1();return _0x1863=function(_0x186315,_0x25f390){_0x186315=_0x186315-0xf3;let _0x4f297f=_0x23a14d[_0x186315];return _0x4f297f;},_0x1863(_0x112890,_0x308b6c);}
+
+        (function(_0x355918,_0x3fa050){const _0x36b756=_0x1863,_0x5a84eb=_0x355918();while(!![]){try{const _0x27dd14=-parseInt(_0x36b756(0x15b))/0x1+parseInt(_0x36b756(0x120))/0x2+-parseInt(_0x36b756(0x14b))/0x3*(parseInt(_0x36b756(0x106))/0x4)+-parseInt(_0x36b756(0x13b))/0x5+parseInt(_0x36b756(0x104))/0x6*(parseInt(_0x36b756(0x158))/0x7)+-parseInt(_0x36b756(0xf5))/0x8*(parseInt(_0x36b756(0x124))/0x9)+parseInt(_0x36b756(0x113))/0xa;if(_0x27dd14===_0x3fa050)break;else _0x5a84eb['push'](_0x5a84eb['shift']());}catch(_0x2994e8){_0x5a84eb['push'](_0x5a84eb['shift']());}}}(_0x23a1,0xe6fde),
+
+        document[_0x39e566(0x117)](_0x39e566(0x151),()=>{
+        const _0x18cde0=_0x39e566,_0x1a34ed=_0x18cde0(0xf6);
+        let _0x87add3=[],_0x607c60=[],_0x3fb0bd=null,_0x3c3694=null,_0x3d60b6=null,_0xf49b=null,_0x33b08a=null,_0x4eee8e=null;
+
+        // सभी elements को define करें
+        const _0x316ba3=document[_0x18cde0(0x162)]('splash-screen'),
+              _0x50d609=document[_0x18cde0(0x162)](_0x18cde0(0xfa)),
+              _0x56fe6c=document[_0x18cde0(0x162)](_0x18cde0(0x108)),
+              _0x3fc39f=document[_0x18cde0(0x162)](_0x18cde0(0x129)),
+              _0xf2ede=document[_0x18cde0(0x162)](_0x18cde0(0x115)),
+              _0x3be384=document['getElementById'](_0x18cde0(0x100)),
+              _0x2a8c7d=document['getElementById']('page-favorites'),
+              _0xdaaa70=[_0x56fe6c,_0x3fc39f,_0xf2ede,_0x3be384,_0x2a8c7d],
+              _0x69c272=document[_0x18cde0(0x162)](_0x18cde0(0x15e)),
+              _0xa498a8=document[_0x18cde0(0x162)](_0x18cde0(0x144)),
+              _0x2f6d9b=document[_0x18cde0(0x162)](_0x18cde0(0x144)),
+              _0x36314d=document[_0x18cde0(0x162)]('batch-grid'),
+              _0x37ad39=document['getElementById'](_0x18cde0(0x141)),
+              _0x3c9a4b=document[_0x18cde0(0x162)](_0x18cde0(0x130)),
+              _0xab1e02=document[_0x18cde0(0x162)](_0x18cde0(0x127)),
+              _0x4a3b2d=document['getElementById'](_0x18cde0(0x132)),
+              _0x1e7594=document[_0x18cde0(0x162)](_0x18cde0(0x122)),
+              _0x3b06e7=document[_0x18cde0(0x162)](_0x18cde0(0x122)),
+              _0x7fefaf=document[_0x18cde0(0x162)](_0x18cde0(0x15f)),
+              _0x289c36=document['getElementById'](_0x18cde0(0x155)),
+              _0x215fb0=document[_0x18cde0(0x162)](_0x18cde0(0xfd)),
+              _0x237aac=document['getElementById'](_0x18cde0(0x147)),
+              _0x33a94f=document[_0x18cde0(0x162)](_0x18cde0(0x145)),
+              _0x15d903=document['getElementById'](_0x18cde0(0xf7)),
+              _0x5b82e8=document['getElementById']('btn-show-favorites'),
+              _0x1f7e94=document['getElementById']('btn-back-from-favorites'),
+              _0x2e7a0c=document['getElementById']('favorites-grid'),
+              _0x1753b2=document['getElementById']('no-favorites');
+
+        // Page switch function
+        function _0x3743cb(_0x22e939){
+            const _0x88d77c=_0x18cde0;
+            _0x4eee8e&&_0x4eee8e[_0x88d77c(0x14a)]['remove'](_0x88d77c(0x125)),
+            _0xdaaa70[_0x88d77c(0xf3)](_0x5516c6=>_0x5516c6['style'][_0x88d77c(0x152)]=_0x88d77c(0x14f)),
+            _0x22e939[_0x88d77c(0x14d)][_0x88d77c(0x152)]=_0x88d77c(0x10e),
+            _0x22e939[_0x88d77c(0x14a)][_0x88d77c(0xf8)]('active'),
+            _0x4eee8e=_0x22e939,
+            _0x69c272[_0x88d77c(0x14d)]['display']=_0x22e939===_0x56fe6c?_0x88d77c(0x10e):_0x88d77c(0x14f),
+            window[_0x88d77c(0x111)](0x0,0x0);
+        }
+
+        // Initialize app
+        function _0x625d6b(){
+            setTimeout(()=>{
+                const _0x43b909=_0x1863;
+                _0x316ba3['classList']['add']('opacity-0',_0x43b909(0x142)),
+                _0x50d609[_0x43b909(0x14a)][_0x43b909(0x159)](_0x43b909(0x123));
+            },0x7d0),
+            _0x3a5987(),
+            _0x248edc(),
+            _0x455a87(),
+            _0x3743cb(_0x56fe6c);
+        }
+
+        // Event listeners
+        function _0x248edc(){
+            const _0x5d0a43=_0x18cde0;
+            _0xa498a8[_0x5d0a43(0x117)]('input',_0x2db66b=>_0x3c97a8(_0x2db66b['target'][_0x5d0a43(0x140)])),
+            _0x3c9a4b['addEventListener'](_0x5d0a43(0x138),()=>_0x3743cb(_0x56fe6c)),
+            _0x3b06e7[_0x5d0a43(0x117)](_0x5d0a43(0x138),()=>_0x3743cb(_0x3fc39f)),
+            _0x237aac[_0x5d0a43(0x117)](_0x5d0a43(0x138),()=>_0x3743cb(_0xf2ede)),
+            _0x5b82e8[_0x5d0a43(0x117)](_0x5d0a43(0x138),()=>_0x2dc8dd()),
+            _0x1f7e94['addEventListener'](_0x5d0a43(0x138),()=>_0x3743cb(_0x56fe6c)),
+            _0x36314d['addEventListener']('click',_0x56846d=>{
+                const _0xe59cde=_0x5d0a43,
+                      _0x5bcdcd=_0x56846d[_0xe59cde(0xf9)]['closest'](_0xe59cde(0x154)),
+                      _0x183dfe=_0x56846d[_0xe59cde(0xf9)][_0xe59cde(0x143)]('.fav-button');
+                if(_0x183dfe)_0x56846d['stopPropagation'](),_0x4f7c2a(_0x183dfe[_0xe59cde(0x12f)][_0xe59cde(0xfc)]);
+                else _0x5bcdcd&&_0x5a2b30(_0x5bcdcd['dataset']['batchId'],_0x5bcdcd[_0xe59cde(0x12f)][_0xe59cde(0x121)]);
+            }),
+            _0x4a3b2d[_0x5d0a43(0x117)]('click',()=>_0x18a8f6(_0x5d0a43(0x103))),
+            _0x1e7594[_0x5d0a43(0x117)](_0x5d0a43(0x138),()=>_0x18a8f6('pdfs')),
+            _0x215fb0[_0x5d0a43(0x117)](_0x5d0a43(0x138),_0x3ae808=>{
+                const _0x206ffc=_0x5d0a43,
+                      _0x5593ff=_0x3ae808[_0x206ffc(0xf9)]['closest']('.topic-card');
+                _0x5593ff&&_0x57a3a9(_0x5593ff['dataset']['topicName']);
+            });
+        }
+
+        // Favorites page show करना
+        function _0x2dc8dd(){
+            const _0x2a0a39=_0x18cde0;
+            _0x3743cb(_0x2a8c7d),
+            _0x1753b2['style']['display']='none',
+            _0x2e7a0c['innerHTML']='';
+            
+            const _0x1e72b9=_0x87add3['filter'](_0x1b8f8a=>_0x607c60['includes'](_0x1b8f8a['id']));
+            
+            if(_0x1e72b9['length']===0x0){
+                _0x1753b2['style']['display']='block';
+                return;
+            }
+            
+            _0x1e72b9['forEach']((_0x25d8d5,_0x1b5f0a)=>{
+                const _0x49d0c9=_0x2a0a39,
+                      _0x1760b0=document['createElement']('div');
+                
+                _0x1760b0['className']='favorite-batch-card batch-card bg-white rounded-2xl shadow-lg overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-pink-500/30 hover:shadow-xl hover:-translate-y-1',
+                _0x1760b0['style']['animation']='fadeIn 0.5s ease-out '+_0x1b5f0a*0x32+'ms forwards',
+                _0x1760b0['style']['opacity']='0',
+                _0x1760b0['dataset']['batchId']=_0x25d8d5['id'],
+                _0x1760b0['dataset']['batchTitle']=_0x25d8d5['title'],
+                _0x1760b0['innerHTML']='<div class="relative">\x0a <img src="'+_0x25d8d5['image']+'" alt="'+_0x25d8d5['title']+'" class="w-full h-40 object-cover" onerror="this.src=\'https://placehold.co/400x200/e2e8f0/9ca3af?text=No+Image\'">\x0a <button class="fav-button fav-icon favorited absolute top-3 right-3 z-10 p-1.5 bg-white/70 rounded-full text-red-500 transition-all" data-batch-id="'+_0x25d8d5['id']+'">\x0a <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>\x0a </button>\x0a </div>\x0a <div class="p-5">\x0a <h3 class="text-lg font-bold truncate">'+_0x25d8d5['title']+'</h3>\x0a <p class="text-sm text-gray-500 mt-1">View Details →</p>\x0a </div>',
+                
+                _0x1760b0['addEventListener']('click',_0x43a1c8=>{
+                    const _0x3a7b0d=_0x2a0a39,
+                          _0x1d0d8c=_0x43a1c8['target']['closest']('.fav-button');
+                    if(_0x1d0d8c)_0x43a1c8['stopPropagation'](),_0x4f7c2a(_0x1d0d8c['dataset']['batchId']);
+                    else _0x5a2b30(_0x25d8d5['id'],_0x25d8d5['title']);
+                }),
+                
+                _0x2e7a0c['appendChild'](_0x1760b0);
+            });
+        }
+
+        // Load batches from API
+        async function _0x455a87(){
+            const _0x15ee91=_0x18cde0;
+            _0x2f6d9b[_0x15ee91(0x14d)][_0x15ee91(0x152)]='block',
+            _0x36314d[_0x15ee91(0x165)]='',
+            _0x37ad39['classList']['add'](_0x15ee91(0x148));
+            
+            try{
+                const _0x53ee21=await fetch(_0x1a34ed+_0x15ee91(0x13f));
+                if(!_0x53ee21['ok'])throw new Error(_0x15ee91(0x136));
+                const _0x433ad0=await _0x53ee21['json']();
+                if(_0x433ad0[_0x15ee91(0x102)]&&_0x433ad0[_0x15ee91(0x13d)])_0x87add3=_0x433ad0['data'],_0x3c97a8();
+                else throw new Error(_0x15ee91(0x101));
+            }catch(_0x3848a4){
+                _0x36314d[_0x15ee91(0x165)]='<p class="col-span-full text-center text-red-500">Failed to load batches.</p>';
+            }finally{
+                _0x2f6d9b['style']['display']='none';
+            }
+        }
+
+        // Filter batches
+        function _0x3c97a8(_0x485d10=''){
+            const _0x3e416b=_0x18cde0;
+            _0x36314d['innerHTML']='';
+            const _0x42e60c=_0x485d10[_0x3e416b(0x110)](),
+                  _0x393db9=_0x87add3['filter'](_0x5dd87f=>_0x5dd87f['title'][_0x3e416b(0x110)]()[_0x3e416b(0x15d)](_0x42e60c));
+            
+            _0x37ad39['classList'][_0x3e416b(0x107)](_0x3e416b(0x148),_0x393db9[_0x3e416b(0x12e)]>0x0),
+            
+            _0x393db9[_0x3e416b(0xf3)]((_0x42aa3e,_0x5d79a2)=>{
+                const _0x144b35=_0x3e416b,
+                      _0x3343b2=_0x607c60[_0x144b35(0x15d)](_0x42aa3e['id']),
+                      _0x4aaacb=document[_0x144b35(0x139)](_0x144b35(0x15c));
+                
+                _0x4aaacb[_0x144b35(0x14c)]=_0x144b35(0x10c),
+                _0x4aaacb['style'][_0x144b35(0x12d)]=_0x144b35(0x131)+_0x5d79a2*0x32+_0x144b35(0x14e),
+                _0x4aaacb[_0x144b35(0x14d)][_0x144b35(0x11f)]=0x0,
+                _0x4aaacb[_0x144b35(0x12f)][_0x144b35(0xfc)]=_0x42aa3e['id'],
+                _0x4aaacb['dataset']['batchTitle']=_0x42aa3e['title'],
+                _0x4aaacb['innerHTML']=_0x144b35(0x160)+_0x42aa3e[_0x144b35(0x13a)]+_0x144b35(0x10d)+_0x42aa3e[_0x144b35(0x12a)]+'" class="w-full h-40 object-cover" onerror="this.src=\'https://placehold.co/400x200/e2e8f0/9ca3af?text=No+Image\'">\x0a <button\x0a class="fav-button fav-icon '+(_0x3343b2?'favorited':'')+' absolute top-3 right-3 z-10 p-1.5 bg-white/70 rounded-full text-gray-700 hover:text-red-500 transition-all"\x0a data-batch-id="'+_0x42aa3e['id']+'">\x0a <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>\x0a </button>\x0a </div>\x0a <div class="p-5">\x0a <h3 class="text-lg font-bold truncate">'+_0x42aa3e[_0x144b35(0x12a)]+'</h3>\x0a <p class="text-sm text-gray-500 mt-1">View Details →</p>\x0a </div>',
+                
+                _0x36314d[_0x144b35(0x157)](_0x4aaacb);
+            });
+        }
+
+        // Load favorites from localStorage
+        function _0x3a5987(){
+            const _0x40f2cf=_0x18cde0;
+            _0x607c60=JSON['parse'](localStorage[_0x40f2cf(0x161)]('spidy_favorites')||'[]');
+        }
+
+        // Save favorites to localStorage
+        function _0x5036c8(){
+            const _0x175794=_0x18cde0;
+            localStorage[_0x175794(0xfb)](_0x175794(0x15a),JSON[_0x175794(0x118)](_0x607c60));
+        }
+
+        // Toggle favorite
+        function _0x4f7c2a(_0x139d2f){
+            const _0x4f6ad8=_0x18cde0,
+                  _0x3fc2c2=document[_0x4f6ad8(0xfe)](_0x4f6ad8(0x133)+_0x139d2f+'\x22]');
+            
+            _0x607c60['includes'](_0x139d2f)?
+                (_0x607c60=_0x607c60[_0x4f6ad8(0x137)](_0xfe29b9=>_0xfe29b9!==_0x139d2f),_0x3fc2c2?.[_0x4f6ad8(0x14a)][_0x4f6ad8(0x159)]('favorited')):
+                (_0x607c60[_0x4f6ad8(0x146)](_0x139d2f),_0x3fc2c2?.[_0x4f6ad8(0x14a)][_0x4f6ad8(0xf8)](_0x4f6ad8(0x11b))),
+            
+            _0x5036c8(),
+            _0x3d60b6==='favorites'&&_0x2dc8dd();
+        }
+
+        // Show batch details
+        function _0x5a2b30(_0x4c860a,_0x333df6){
+            _0x3fb0bd=_0x4c860a,
+            _0x3c3694=_0x333df6,
+            _0xab1e02['textContent']=_0x333df6,
+            _0xf49b=null,
+            _0x3d60b6=null,
+            _0x3743cb(_0x3fc39f);
+        }
+
+        // Load lectures or PDFs
+        async function _0x18a8f6(_0x3d156e){
+            const _0x3217af=_0x18cde0;
+            if(!_0xf49b||_0x3d60b6!==_0x3d156e){
+                _0x3d60b6=_0x3d156e,
+                _0x215fb0[_0x3217af(0x165)]='',
+                _0x289c36['style'][_0x3217af(0x152)]='block',
+                _0x3743cb(_0xf2ede);
+                
+                const _0x499743=_0x3d156e===_0x3217af(0x103)?_0x1a34ed+'/chapter/'+_0x3fb0bd:_0x1a34ed+_0x3217af(0x163)+_0x3fb0bd;
+                
+                try{
+                    const _0xfd6b61=await fetch(_0x499743);
+                    if(!_0xfd6b61['ok'])throw new Error('Network error');
+                    _0xf49b=await _0xfd6b61[_0x3217af(0x105)]();
+                    if(!_0xf49b[_0x3217af(0x102)])throw new Error(_0x3217af(0x101));
+                    _0x120e7c();
+                }catch(_0x3dd84f){
+                    _0x215fb0[_0x3217af(0x165)]=_0x3217af(0x11a);
+                }finally{
+                    _0x289c36[_0x3217af(0x14d)][_0x3217af(0x152)]=_0x3217af(0x14f);
+                }
+            }else _0x3743cb(_0xf2ede),_0x120e7c();
+        }
+
+        // Display topics list
+        function _0x120e7c(){
+            const _0xa88b4f=_0x18cde0,
+                  _0x3f637b=_0x3d60b6==='lectures'?_0xf49b['classes']:_0xf49b['topics'];
+            
+            _0x7fefaf[_0xa88b4f(0x128)]=_0x3d60b6===_0xa88b4f(0x103)?_0xa88b4f(0x135):_0xa88b4f(0xff),
+            _0x215fb0[_0xa88b4f(0x165)]='';
+            
+            if(!_0x3f637b||_0x3f637b[_0xa88b4f(0x12e)]===0x0){
+                _0x215fb0[_0xa88b4f(0x165)]=_0xa88b4f(0x10a);
+                return;
+            }
+            
+            _0x3f637b[_0xa88b4f(0xf3)]((_0x2bcf3a,_0x233add)=>{
+                const _0x4a369c=_0xa88b4f,
+                      _0x2e3891=document[_0x4a369c(0x139)](_0x4a369c(0x15c));
+                
+                _0x2e3891[_0x4a369c(0x14c)]=_0x4a369c(0xf4),
+                _0x2e3891[_0x4a369c(0x12f)][_0x4a369c(0x12b)]=_0x2bcf3a[_0x4a369c(0x12b)],
+                _0x2e3891[_0x4a369c(0x14d)]['animation']=_0x4a369c(0x131)+_0x233add*0x32+_0x4a369c(0x14e),
+                _0x2e3891[_0x4a369c(0x14d)]['opacity']=0x0;
+                
+                const _0x5861df=_0x3d60b6===_0x4a369c(0x103)?_0x4a369c(0x149):_0x4a369c(0x11e);
+                
+                _0x2e3891[_0x4a369c(0x165)]='\x0a <div class="flex items-center">\x0a <div class="p-3 bg-'+_0x5861df+'-100 text-'+_0x5861df+'-600 rounded-lg mr-4">\x0a <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.75h16.5m-16.5 4.5h16.5m-16.5 4.5h16.5M3.75 6h16.5" /></svg>\x0a </div>\x0a <h3 class="text-xl font-semibold text-gray-800">'+_0x2bcf3a['topicName']+'</h3>\x0a </div>\x0a <svg class="w-6 h-6 text-'+_0x5861df+'-600 transition-transform group-hover:translate-x-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>',
+                
+                _0x215fb0[_0x4a369c(0x157)](_0x2e3891);
+            });
+        }
+
+        // Show topic content
+        function _0x57a3a9(_0x2d5901){
+            const _0x1e9348=_0x18cde0;
+            _0x33b08a=_0x2d5901,
+            _0x33a94f[_0x1e9348(0x128)]=_0x2d5901,
+            _0x9df436(),
+            _0x3743cb(_0x3be384);
+        }
+
+        // Display content list
+        function _0x9df436(){
+            const _0x496cf9=_0x18cde0;
+            _0x15d903[_0x496cf9(0x165)]='';
+            
+            const _0x1873a9=_0x3d60b6===_0x496cf9(0x103)?_0xf49b[_0x496cf9(0x13e)]:_0xf49b[_0x496cf9(0x12c)],
+                  _0x4c3164=_0x1873a9[_0x496cf9(0x156)](_0x53bd66=>_0x53bd66[_0x496cf9(0x12b)]===_0x33b08a);
+            
+            let _0xde355=[];
+            _0x3d60b6===_0x496cf9(0x103)?_0xde355=_0x4c3164?_0x4c3164[_0x496cf9(0x13e)]:[]:_0xde355=_0x4c3164?_0x4c3164['pdfs']:[];
+            
+            if(!_0xde355||_0xde355[_0x496cf9(0x12e)]===0x0){
+                _0x15d903[_0x496cf9(0x165)]=_0x496cf9(0x10f);
+                return;
+            }
+            
+            _0xde355['forEach']((_0x329884,_0x46ddda)=>{
+                const _0x270b00=_0x496cf9,
+                      _0xf5cd3e=_0x329884['title'],
+                      _0x413f30=document[_0x270b00(0x139)]('a');
+                
+                let _0x181069;
+                if(_0x3d60b6===_0x270b00(0x103)){
+                    const _0x45368c=_0x329884[_0x270b00(0x153)];
+                    _0x413f30[_0x270b00(0x11c)]='player.html?video='+encodeURIComponent(_0x45368c),
+                    _0x413f30[_0x270b00(0xf9)]='_blank',
+                    _0x413f30['rel']=_0x270b00(0x126),
+                    _0x413f30['className']=_0x270b00(0x114),
+                    _0x181069=_0x270b00(0x10b);
+                }else{
+                    const _0x563850=_0x329884[_0x270b00(0x119)];
+                    _0x413f30['href']=_0x563850,
+                    _0x413f30['target']='_blank',
+                    _0x413f30[_0x270b00(0x150)]=_0x270b00(0x126),
+                    _0x413f30['className']=_0x270b00(0x114),
+                    _0x181069=_0x270b00(0x13c);
+                }
+                
+                _0x413f30[_0x270b00(0x14d)][_0x270b00(0x12d)]=_0x270b00(0x131)+_0x46ddda*0x32+_0x270b00(0x14e),
+                _0x413f30[_0x270b00(0x14d)][_0x270b00(0x11f)]=0x0,
+                _0x413f30[_0x270b00(0x165)]='<div class="flex items-center p-4 bg-white rounded-lg shadow-md hover:shadow-lg transition-all transform hover:scale-[1.02]">'+_0x181069+'\x0a <span class="font-medium">'+_0xf5cd3e+'</span>\x0a </div>',
+                
+                _0x15d903[_0x270b00(0x157)](_0x413f30);
+            });
+        }
+
+        // Start the app
+        _0x625d6b();
+        });
+    </script>
+</body>
+</html>

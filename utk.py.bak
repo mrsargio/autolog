@@ -1,0 +1,404 @@
+import json
+import requests
+import time
+import threading
+from queue import Queue
+from pathlib import Path
+import re
+from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import os
+
+class FastUtkarshDownloader:
+    def __init__(self, max_workers=10):
+        self.base_url = "https://utk-batches-api.vercel.app/api"
+        self.api_url = "https://utkarsh-api.vercel.app/api"
+        self.max_workers = max_workers
+        self.session = requests.Session()
+        self.session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        })
+        self.all_links = []
+        self.all_responses = []
+        self.lock = threading.Lock()
+    
+    def clean_name(self, name):
+        if not name:
+            return "unknown"
+        cleaned = re.sub(r'[<>:"/\\|?*]', '_', str(name))
+        return cleaned[:80].strip()
+    
+    def fast_request(self, url):
+        """Fast API request without retries"""
+        try:
+            response = self.session.get(url, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                with self.lock:
+                    self.all_responses.append({
+                        'url': url,
+                        'timestamp': datetime.now().isoformat(),
+                        'data': data
+                    })
+                return data
+        except:
+            pass
+        return None
+    
+    def save_json_fast(self, folder_path, filename, data):
+        """Fast JSON save"""
+        try:
+            json_file = folder_path / f"{filename}.json"
+            with open(json_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False, default=str)
+            return True
+        except:
+            return False
+    
+    def save_links_fast(self, folder_path, content_data, hierarchy_info):
+        """Fast links save"""
+        try:
+            links_file = folder_path / "ALL_LINKS.txt"
+            with open(links_file, 'w', encoding='utf-8') as f:
+                f.write("UTKARSH - ALL LINKS\n")
+                f.write("=" * 50 + "\n")
+                f.write(f"Time: {time.strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+                
+                for key, value in hierarchy_info.items():
+                    f.write(f"{key}: {value}\n")
+                f.write("\nLINKS:\n")
+                
+                for item in content_data.get('data', []):
+                    title = item.get('title', 'No Title')
+                    url = item.get('url', '')
+                    if url:
+                        f.write(f"\n{title}\n")
+                        f.write(f"URL: {url}\n")
+                        f.write("-" * 40 + "\n")
+                        
+                        with self.lock:
+                            self.all_links.append({
+                                'hierarchy': hierarchy_info.copy(),
+                                'title': title,
+                                'url': url
+                            })
+            return True
+        except:
+            return False
+    
+    def get_master_categories(self):
+        return self.fast_request(f"{self.base_url}/master-categories")
+    
+    def get_subcategories(self, master_id):
+        return self.fast_request(f"{self.base_url}/subcategories?master_id={master_id}")
+    
+    def get_final_categories(self, subcat_id):
+        return self.fast_request(f"{self.base_url}/final-categories?subcat_id={subcat_id}")
+    
+    def get_courses(self, master_id, cat_id, sub_cat_id):
+        data = self.fast_request(f"{self.base_url}/courses?master_id={master_id}&cat_id={cat_id}&sub_cat_id={sub_cat_id}")
+        if isinstance(data, str):
+            try:
+                return json.loads(data)
+            except:
+                return None
+        return data
+    
+    def get_batch_details(self, course_id):
+        return self.fast_request(f"{self.api_url}/batch/{course_id}")
+    
+    def get_topics(self, course_id, subject_id):
+        return self.fast_request(f"{self.api_url}/course/{course_id}/subject/{subject_id}/topics")
+    
+    def get_topic_content(self, course_id, subject_id, topic_id):
+        return self.fast_request(f"{self.api_url}/course/{course_id}/subject/{subject_id}/topic/{topic_id}/content")
+    
+    def process_topic_content(self, args):
+        """Process single topic content - optimized for threading"""
+        course_id, subject_id, topic_id, topic_title, subject_title, course_title, master_cat, sub_cat, final_cat, base_path = args
+        
+        try:
+            # Create folder path
+            topic_folder = base_path / self.clean_name(master_cat) / self.clean_name(sub_cat) / self.clean_name(final_cat) / f"{course_id}_{self.clean_name(course_title)}" / f"{self.clean_name(subject_title)}" / f"{self.clean_name(topic_title)}"
+            topic_folder.mkdir(parents=True, exist_ok=True)
+            
+            # Get content
+            content_data = self.get_topic_content(course_id, subject_id, topic_id)
+            if not content_data or 'data' not in content_data:
+                return None
+            
+            # Save content JSON
+            self.save_json_fast(topic_folder, "content_data", content_data)
+            
+            # Prepare hierarchy info
+            hierarchy_info = {
+                'Master': master_cat,
+                'Sub': sub_cat, 
+                'Final': final_cat,
+                'Course': course_title,
+                'Subject': subject_title,
+                'Topic': topic_title
+            }
+            
+            # Save links
+            self.save_links_fast(topic_folder, content_data, hierarchy_info)
+            
+            return len(content_data.get('data', []))
+            
+        except Exception as e:
+            return None
+    
+    def process_course_parallel(self, course, master_cat, sub_cat, final_cat, base_path):
+        """Process course with parallel topic processing"""
+        course_id = course.get('id')
+        course_title = course.get('title', 'Unknown Course')
+        
+        # Get batch details
+        batch_data = self.get_batch_details(course_id)
+        if not batch_data or 'data' not in batch_data:
+            return 0
+        
+        subjects = batch_data['data'].get('subjects', [])
+        total_links = 0
+        
+        # Process subjects sequentially (less data)
+        for subject in subjects:
+            subject_id = subject.get('id')
+            subject_title = subject.get('title', 'Unknown Subject')
+            
+            # Get topics
+            topics_data = self.get_topics(course_id, subject_id)
+            if not topics_data or 'data' not in topics_data:
+                continue
+            
+            topics = topics_data['data']
+            topic_args = []
+            
+            # Prepare arguments for parallel processing
+            for topic in topics:
+                topic_id = topic.get('id')
+                topic_title = topic.get('title', 'Unknown Topic')
+                
+                args = (
+                    course_id, subject_id, topic_id, topic_title, 
+                    subject_title, course_title, master_cat, sub_cat, 
+                    final_cat, base_path
+                )
+                topic_args.append(args)
+            
+            # Process topics in parallel
+            with ThreadPoolExecutor(max_workers=5) as executor:
+                futures = [executor.submit(self.process_topic_content, arg) for arg in topic_args]
+                for future in as_completed(futures):
+                    result = future.result()
+                    if result:
+                        total_links += result
+            
+            time.sleep(0.1)  # Small delay between subjects
+        
+        return total_links
+    
+    def process_final_category_parallel(self, args):
+        """Process final category in parallel"""
+        master_cat, sub_cat, final_cat, base_path = args
+        
+        try:
+            master_id = master_cat['id']
+            master_name = master_cat['name']
+            subcat_id = sub_cat['id'] 
+            subcat_name = sub_cat['name']
+            final_cat_id = final_cat['id']
+            final_cat_name = final_cat['name']
+            
+            # Get courses
+            courses_data = self.get_courses(master_id, subcat_id, final_cat_id)
+            if not courses_data or 'data' not in courses_data:
+                return 0
+            
+            courses = courses_data['data']
+            total_course_links = 0
+            
+            # Process courses in smaller parallel batches
+            course_batch_size = 3
+            for i in range(0, len(courses), course_batch_size):
+                course_batch = courses[i:i + course_batch_size]
+                
+                with ThreadPoolExecutor(max_workers=course_batch_size) as executor:
+                    futures = []
+                    for course in course_batch:
+                        future = executor.submit(
+                            self.process_course_parallel, 
+                            course, master_name, subcat_name, final_cat_name, base_path
+                        )
+                        futures.append(future)
+                    
+                    for future in as_completed(futures):
+                        links_count = future.result()
+                        total_course_links += links_count
+                
+                time.sleep(0.2)  # Small delay between batches
+            
+            return total_course_links
+            
+        except Exception as e:
+            return 0
+    
+    def download_all_ultra_fast(self, download_path="Utkarsh_Fast_Download"):
+        """Ultra fast download with maximum parallelism"""
+        print("🚀 ULTRA FAST DOWNLOAD STARTING...")
+        print("⚡ Using maximum parallelism for speed\n")
+        
+        start_time = time.time()
+        self.all_links = []
+        self.all_responses = []
+        
+        base_path = Path(download_path)
+        base_path.mkdir(exist_ok=True)
+        
+        try:
+            # Step 1: Get master categories
+            print("📥 Fetching master categories...")
+            master_data = self.get_master_categories()
+            if not master_data or 'data' not in master_data:
+                print("❌ No master categories found")
+                return
+            
+            masters = master_data['data']
+            print(f"✅ Found {len(masters)} master categories")
+            
+            # Step 2: Get all subcategories in parallel
+            print("📥 Fetching subcategories in parallel...")
+            subcategories_map = {}
+            master_subcat_args = []
+            
+            for master in masters:
+                master_subcat_args.append(master)
+            
+            # Fetch subcategories in parallel
+            with ThreadPoolExecutor(max_workers=min(self.max_workers, len(master_subcat_args))) as executor:
+                future_to_master = {executor.submit(self.get_subcategories, master['id']): master for master in master_subcat_args}
+                
+                for future in as_completed(future_to_master):
+                    master = future_to_master[future]
+                    subcat_data = future.result()
+                    if subcat_data and 'data' in subcat_data:
+                        subcategories_map[master['id']] = {
+                            'master': master,
+                            'subcategories': subcat_data['data']
+                        }
+            
+            # Step 3: Get all final categories in parallel
+            print("📥 Fetching final categories in parallel...")
+            final_categories_list = []
+            
+            for master_id, data in subcategories_map.items():
+                master_info = data['master']
+                subcategories = data['subcategories']
+                
+                for subcat in subcategories:
+                    final_categories_list.append((master_info, subcat))
+            
+            # Fetch final categories in parallel
+            final_categories_map = {}
+            with ThreadPoolExecutor(max_workers=min(self.max_workers, len(final_categories_list))) as executor:
+                future_to_subcat = {}
+                
+                for master_info, subcat in final_categories_list:
+                    future = executor.submit(self.get_final_categories, subcat['id'])
+                    future_to_subcat[future] = (master_info, subcat)
+                
+                for future in as_completed(future_to_subcat):
+                    master_info, subcat = future_to_subcat[future]
+                    final_data = future.result()
+                    if final_data and 'data' in final_data:
+                        key = f"{master_info['id']}_{subcat['id']}"
+                        final_categories_map[key] = {
+                            'master': master_info,
+                            'subcat': subcat,
+                            'finals': final_data['data']
+                        }
+            
+            # Step 4: Process all final categories in parallel (MAIN PARALLEL PROCESSING)
+            print("🚀 Processing all content in parallel...")
+            processing_args = []
+            total_final_cats = 0
+            
+            for key, data in final_categories_map.items():
+                master_info = data['master']
+                subcat_info = data['subcat']
+                final_categories = data['finals']
+                
+                for final_cat in final_categories:
+                    processing_args.append((
+                        master_info, subcat_info, final_cat, base_path
+                    ))
+                    total_final_cats += 1
+            
+            print(f"🎯 Processing {total_final_cats} final categories with {self.max_workers} workers")
+            
+            # MAIN PARALLEL EXECUTION
+            total_links_collected = 0
+            with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+                futures = [executor.submit(self.process_final_category_parallel, arg) for arg in processing_args]
+                
+                for i, future in enumerate(as_completed(futures), 1):
+                    links_count = future.result()
+                    total_links_collected += links_count
+                    
+                    if i % 10 == 0:
+                        print(f"📊 Progress: {i}/{total_final_cats} categories, {total_links_collected} links")
+            
+            # Save final data
+            self.save_final_data(base_path, start_time, total_links_collected)
+            
+        except Exception as e:
+            print(f"❌ Error: {str(e)}")
+            self.save_final_data(base_path, start_time, len(self.all_links))
+    
+    def save_final_data(self, base_path, start_time, total_links):
+        """Save final data quickly"""
+        try:
+            # Save global summary
+            summary_file = base_path / "GLOBAL_SUMMARY.txt"
+            with open(summary_file, 'w', encoding='utf-8') as f:
+                f.write(f"UTKARSH - FAST DOWNLOAD SUMMARY\n")
+                f.write(f"Total Links: {total_links}\n")
+                f.write(f"Total API Calls: {len(self.all_responses)}\n")
+                f.write(f"Time: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+            
+            # Save all responses
+            responses_file = base_path / "ALL_RESPONSES.json"
+            with open(responses_file, 'w', encoding='utf-8') as f:
+                json.dump(self.all_responses, f, indent=2, ensure_ascii=False, default=str)
+            
+            end_time = time.time()
+            duration = end_time - start_time
+            
+            print(f"\n🎉 DOWNLOAD COMPLETED!")
+            print(f"📍 Location: {base_path.absolute()}")
+            print(f"📊 Total links: {total_links}")
+            print(f"🔗 API calls: {len(self.all_responses)}")
+            print(f"⚡ Time: {duration:.2f} seconds")
+            print(f"🚀 Speed: {total_links/max(1,duration):.1f} links/second")
+            
+        except Exception as e:
+            print(f"Note: {str(e)}")
+
+def main():
+    """Run ultra fast downloader"""
+    print("🚀 UTKARSH ULTRA FAST DOWNLOADER")
+    print("⚡ No external packages required")
+    print("🎯 Maximum parallelism enabled\n")
+    
+    # Adjust workers based on your system
+    downloader = FastUtkarshDownloader(max_workers=15)
+    
+    try:
+        downloader.download_all_ultra_fast()
+    except KeyboardInterrupt:
+        print("\n⏹️ Stopped by user")
+    except Exception as e:
+        print(f"\n❌ Error: {str(e)}")
+
+if __name__ == "__main__":
+    main()

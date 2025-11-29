@@ -1,0 +1,10 @@
+=== BATCH EXTRACTION REPORT ===
+
+API Endpoints Found: 9
+Batches via API: 0
+Batch Names from Content: 0
+Course Titles from Content: 174
+Prices Found: 0
+
+=== SAMPLE DATA ===
+
